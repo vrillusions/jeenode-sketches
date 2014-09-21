@@ -1,3 +1,11 @@
+// JeeNode Network
+// Node ID: 2
+// Location: Garage
+// Sensors: Temperature (Port 1), Garage door status (Port 4)
+//
+// TODO: apparently 3 AA batteries only last about 9 months
+// TODO: add battery status to output
+//
 // This reads a magnetic door sensor. At least with this style
 // the sensor is normally open and the circuit closes when the
 // two sensors are next to each other.
