@@ -29,6 +29,9 @@ const int DOOR_OPEN = HIGH;    // Door open when signal is HIGH
 const int DOOR_CLOSED = LOW;   // Door closed when LOW
 const int DIO_OFFSET = 3;      // DIO is port num + 3
 
+// global variables
+int batt_loop_count = 99;      // Make high so we get data first time
+int has_lowbat = false;        // Start out assuming it's fine
 
 // Basic macro for debugging
 // Ideally change this to a function once I figure out how to accept anything
@@ -97,13 +100,23 @@ void setup() {
 }
 
 
+// Payload consists of 5 words:
+// - Is battery low? (will be 1 if so)
+// - Values from each of the 4 ports
 void loop() {
   float tempc = 0;
   int door_status_4 = digitalRead(DIO4);
-  word payload[4] = {0,0,0,0};
+  word payload[5] = {0,0,0,0,0};
 
-  // 4th word is index 3
-  payload[3] = door_status_4;
+  // Update low battery every 30 minutes
+  // TODO: Does this even save power?
+  if (batt_loop_count >= 30) {
+    has_lowbat = rf12_lowbat();
+    batt_loop_count = 0;
+  }
+  else {
+    batt_loop_count++;
+  }
 
 #ifdef DEBUG
   if (door_status_4 == DOOR_OPEN) {
@@ -116,8 +129,11 @@ void loop() {
 
   tempc = get_temperature(temp_dev1);
   DEBUG_PRINT(tempc);
-  payload[0] = int(tempc * 100);
 
+  payload[0] = has_lowbat;
+  payload[1] = int(tempc * 100);
+  payload[4] = door_status_4;
+  
   rf12_sleep(RF12_WAKEUP);
   rf12_sendNow(JEELINK_ID, &payload, sizeof payload);
   rf12_sendWait(2);
