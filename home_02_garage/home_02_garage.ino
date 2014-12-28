@@ -9,8 +9,17 @@
 // This reads a magnetic door sensor. At least with this style
 // the sensor is normally open and the circuit closes when the
 // two sensors are next to each other.
-
+//
 // Connect one wire to digital and other to ground
+//
+// TEMP421 code thanks to http://ka1kjz.com (my bookmark no longer points to the source
+// posting though, should still be on there somewhere
+// TEMP421 pinout (pins are counted if sensor is on right):
+// D - pin3
+// G - pin1
+// + - pin2
+// A - pin4
+
 
 #include <JeeLib.h>
 
@@ -18,7 +27,7 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 
 // user settings
-//#define DEBUG        // Comment out to disable
+#define DEBUG false         // Set false to turn off all debugging
 const int JEELINK_ID = 1;   // Jeelink is id 1 (or 0 to broadcast)
 const int NETGROUP = 100;   // Netgroup everyone is on
 const int NODE_ID = 2;      // id of THIS node
@@ -33,28 +42,10 @@ const int DIO_OFFSET = 3;      // DIO is port num + 3
 int batt_loop_count = 99;      // Make high so we get data first time
 int has_lowbat = false;        // Start out assuming it's fine
 
-// Basic macro for debugging
-// Ideally change this to a function once I figure out how to accept anything
-#ifdef DEBUG
-  #define DEBUG_PRINT(x) Serial.println(x)
-#else
-  #define DEBUG_PRINT(x)
-#endif
-
-
-// TEMP421 code thanks to http://ka1kjz.com (my bookmark no longer points to the source
-// posting though, should still be on there somewhere
-// TEMP421 pinout (pins are counted if sensor is on right):
-// D - pin3
-// G - pin1
-// + - pin2
-// A - pin4
-
 // Secong parameter that's commented out is the rate of communication
 // Can be KHZMAX (default), KHZ400, or KHZ100
 PortI2C temp_port1 (1 /*, PortI2C::KHZ400 */);
 DeviceI2C temp_dev1 (temp_port1, 0x2A);  // I2C Address of 0x2A
-
 
 // Currently just have sensor connected to port 4
 //int DIO1 = 1 + DIO_OFFSET;
@@ -63,8 +54,25 @@ DeviceI2C temp_dev1 (temp_port1, 0x2A);  // I2C Address of 0x2A
 const int DIO4 = 4 + DIO_OFFSET;
 
 
+// Print the line to serial if debug is enabled. The delay is important
+void debug_print(String x) {
+  if (DEBUG) {
+    Serial.println(x);
+    delay(100);
+  }
+}
+
+
+// Convenience function that will take in a float and return a string
+String float2str(float val, int length) {
+  char strval[length];
+  dtostrf(val, 0, 2, strval);
+  return strval;
+}
+
+
 // Returns the temperature of tempdev where tempdev is a DeviceI2C object
-int get_temperature(DeviceI2C tempdev) {
+float get_temperature(DeviceI2C tempdev) {
   int temp_lo = 0;
   int temp_high = 0;
   float tempc = 0;
@@ -89,14 +97,18 @@ int get_temperature(DeviceI2C tempdev) {
 
 
 void setup() {
-#ifdef DEBUG
-  Serial.begin(57600);
-#endif
-  DEBUG_PRINT("Initializing");
+  if (DEBUG){
+    Serial.begin(57600);
+  }
+  debug_print("Initializing");
 
   rf12_initialize(NODE_ID, RF12_915MHZ, NETGROUP);
 
-  pinMode(DIO4, INPUT_PULLUP);
+  // Do this so the initialize the thermometer (which starts at 0.00)
+  float _unused = get_temperature(temp_dev1);
+  delay(200);
+  
+  pinMode(DIO4, INPUT_PULLUP);  
 }
 
 
@@ -118,17 +130,17 @@ void loop() {
     batt_loop_count++;
   }
 
-#ifdef DEBUG
-  if (door_status_4 == DOOR_OPEN) {
-    DEBUG_PRINT("Door open");
-  }
-  else {
-    DEBUG_PRINT("Door closed");
-  }
-#endif
-
   tempc = get_temperature(temp_dev1);
-  DEBUG_PRINT(tempc);
+  
+  if (DEBUG) {
+    if (door_status_4 == DOOR_OPEN) {
+      debug_print("Door open");
+    }
+    else {
+      debug_print("Door closed");
+    }
+    debug_print(float2str(tempc, 7));
+  }
 
   payload[0] = has_lowbat;
   payload[1] = int(tempc * 100);
