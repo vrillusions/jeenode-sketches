@@ -4,7 +4,6 @@
 // Sensors: Temperature (Port 1), Garage door status (Port 4)
 //
 // TODO: apparently 3 AA batteries only last about 9 months
-// TODO: add battery status to output
 //
 // This reads a magnetic door sensor. At least with this style
 // the sensor is normally open and the circuit closes when the
@@ -15,10 +14,10 @@
 // TEMP421 code thanks to http://ka1kjz.com (my bookmark no longer points to the source
 // posting though, should still be on there somewhere
 // TEMP421 pinout (pins are counted if sensor is on right):
-// D - pin3
-// G - pin1
-// + - pin2
-// A - pin4
+// D - pin3 (data)
+// G - pin1 (ground)
+// + - pin2 (Vin)
+// A - pin4 (clock)
 
 
 #include <JeeLib.h>
@@ -42,7 +41,7 @@ const int DIO_OFFSET = 3;      // DIO is port num + 3
 int batt_loop_count = 99;      // Make high so we get data first time
 int has_lowbat = false;        // Start out assuming it's fine
 
-// Secong parameter that's commented out is the rate of communication
+// Second parameter that's commented out is the rate of communication
 // Can be KHZMAX (default), KHZ400, or KHZ100
 PortI2C temp_port1 (1 /*, PortI2C::KHZ400 */);
 DeviceI2C temp_dev1 (temp_port1, 0x2A);  // I2C Address of 0x2A
