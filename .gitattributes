@@ -1,0 +1,18 @@
+# Normalize line endings of text files
+* text=auto
+
+# Windows files should have CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.ino diff=cpp
+*.cpp diff=cpp
+*.h   diff=cpp
+*.pde diff=cpp
+*.css diff=css
+
+# Exclude these files from export
+.gitattributes export-ignore
+.gitignore     export-ignore
+.github        export-ignore
