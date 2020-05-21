@@ -31,6 +31,7 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 // user settings
 #define DEBUG false         // Set false to turn off all debugging
+                            // true will output to serial but not broadcast anything
 const int JEELINK_ID = 1;   // Jeelink is id 1 (or 0 to broadcast)
 const int NETGROUP = 100;   // Netgroup everyone is on
 const int NODE_ID = 3;      // id of THIS node
@@ -57,6 +58,12 @@ void debug_print(String x) {
     Serial.println(x);
     delay(100);
   }
+}
+
+
+// spend a little time in power down mode while the SHT11 does a measurement
+static void shtDelay () {
+  Sleepy::loseSomeTime(32); // must wait at least 20 ms
 }
 
 
@@ -108,16 +115,23 @@ void loop() {
   payload[0] = has_lowbat;
 
   // get SHT21 values
-  error = sht21_port1.measure(SHT11::HUMI);
-  error |= sht21_port1.measure(SHT11::TEMP);
+  error = sht21_port1.measure(SHT11::HUMI, shtDelay);
+  error |= sht21_port1.measure(SHT11::TEMP, shtDelay);
   sht21_port1.calculate(humi, temp);
   payload[1] = int(humi * 100);
   payload[2] = int(temp * 100);
+  debug_print("Humidity: " + String(humi) + "% Temperature: " + String(temp) + "C");
 
-  rf12_sleep(RF12_WAKEUP);
-  rf12_sendNow(JEELINK_ID, &payload, sizeof payload);
-  rf12_sendWait(2);
-  rf12_sleep(RF12_SLEEP);
+  if (DEBUG) {
+    debug_print("Not sending data");
+    debug_print(' ');
+  }
+  else {
+    rf12_sleep(RF12_WAKEUP);
+    rf12_sendNow(JEELINK_ID, &payload, sizeof payload);
+    rf12_sendWait(2);
+    rf12_sleep(RF12_SLEEP);
+  }
 
   Sleepy::loseSomeTime(60000);
 }

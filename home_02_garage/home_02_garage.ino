@@ -91,6 +91,12 @@ float get_temperature(DeviceI2C tempdev) {
   tempc = (float)temp_lo / 256;
   tempc = tempc + temp_high;
 
+  // The value returned is unsigned so need to make it signed for
+  // negative temperatures
+  if (tempc > 128.0) {
+    tempc -= 256;
+  }
+
   return tempc;
 }
 
