@@ -131,7 +131,7 @@ void loop() {
 
     if (DEBUG) {
       debug_print("Not sending data");
-      debug_print(' ');
+      debug_print(" ");
     }
     else {
       rf12_sleep(RF12_WAKEUP);
