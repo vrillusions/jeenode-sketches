@@ -16,7 +16,7 @@
 // >950 is dry
 //
 // SHT21
-// Operates similar to other 1wire devices. Pinout
+// Needs to be rewired to match the port interface. Pinout:
 // D - SDA
 // G - Gnd
 // + - Vin
@@ -24,7 +24,7 @@
 //
 
 #include <JeeLib.h>
-#include <PortsSHT11.h>
+#include <PortsSHT21.h>
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
@@ -49,7 +49,7 @@ int batt_loop_count = 99;      // Make high so we get data first time
 int has_lowbat = false;        // Start out assuming it's fine
 
 
-SHT11 sht21_port1 (1);
+SHT21 sht21_port1 (1);
 
 
 // Print the line to serial if debug is enabled. The delay is important
@@ -115,8 +115,8 @@ void loop() {
   payload[0] = has_lowbat;
 
   // get SHT21 values
-  error = sht21_port1.measure(SHT11::HUMI, shtDelay);
-  error |= sht21_port1.measure(SHT11::TEMP, shtDelay);
+  sht21_port1.measure(SHT21::HUMI, shtDelay);
+  sht21_port1.measure(SHT21::TEMP, shtDelay);
   sht21_port1.calculate(humi, temp);
   payload[1] = int(humi * 100);
   payload[2] = int(temp * 100);

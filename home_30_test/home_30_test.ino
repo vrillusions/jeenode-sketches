@@ -1,17 +1,12 @@
 // JeeNode Network
-// Node ID: 2
-// Location: Garage
+///////////////////////////////////////////////////////////////////////////////
+// Node ID: 30
+// Location: Test
 // Sensors: DHT22 physically connected to port 1
 //          DHT22 logically has temperature on port 1 and humidity on port 2
-//          Garage door status (Port 4)
 //
-// TODO: apparently 3 AA batteries only last about 9 months
-//
-// This reads a magnetic door sensor. At least with this style
-// the sensor is normally open and the circuit closes when the
-// two sensors are next to each other.
-//
-// Connect one wire to digital and other to ground
+// Humidity will be returned as a whole number already.  So 2105 means 21.05%
+// humidity because floats are multiplied by 100 to get an integer
 //
 // DHT22
 // Needs to be rewired to match the port interface. Pinout:
@@ -20,7 +15,6 @@
 // + - +
 //
 
-
 #include <JeeLib.h>
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); }
@@ -28,29 +22,18 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 // user settings
 #define DEBUG false         // Set false to turn off all debugging
+                            // true will output to serial but not broadcast anything
 const int JEELINK_ID = 1;   // Jeelink is id 1 (or 0 to broadcast)
 const int NETGROUP = 100;   // Netgroup everyone is on
-const int NODE_ID = 2;      // id of THIS node
+const int NODE_ID = 30;     // id of THIS node
 const int DHT22_PORT = 1;   // what port is the DHT connected to.  This port +1 will
                             // be used for humidity
 const bool PRECISE = true;  // Set true for DHT22 and false for DHT11
 
-// sketch constants
-const int DOOR_OPEN = HIGH;    // Door open when signal is HIGH
-const int DOOR_CLOSED = LOW;   // Door closed when LOW
-const int DIO_OFFSET = 3;      // DIO is port num + 3
 
 // global variables
 int batt_loop_count = 99;      // Make high so we get data first time
 int has_lowbat = false;        // Start out assuming it's fine
-
-DHTxx dht (DHT22_PORT+3);
-
-// Currently just have sensor connected to port 4
-//int DIO1 = 1 + DIO_OFFSET;
-//int DIO2 = 2 + DIO_OFFSET;
-//int DIO3 = 3 + DIO_OFFSET;
-const int DIO4 = 4 + DIO_OFFSET;
 
 
 // Print the line to serial if debug is enabled. The delay is important
@@ -62,13 +45,7 @@ void debug_print(String x) {
 }
 
 
-// Convenience function that will take in a float and return a string
-String float2str(float val, int length) {
-  char strval[length];
-  dtostrf(val, 0, 2, strval);
-  return strval;
-}
-
+DHTxx dht (DHT22_PORT+3);
 
 void setup() {
   if (DEBUG){
@@ -77,8 +54,6 @@ void setup() {
   debug_print("Initializing");
 
   rf12_initialize(NODE_ID, RF12_915MHZ, NETGROUP);
-
-  pinMode(DIO4, INPUT_PULLUP);  
 }
 
 
@@ -86,12 +61,10 @@ void setup() {
 // - Is battery low? (will be 1 if so)
 // - Values from each of the 4 ports
 void loop() {
-  int temp, humi;
-  int door_status_4 = digitalRead(DIO4);
   word payload[5] = {0,0,0,0,0};
+  int temp, humi;
 
   // Update low battery every 30 minutes
-  // TODO: Does this even save power?
   if (batt_loop_count >= 30) {
     has_lowbat = rf12_lowbat();
     batt_loop_count = 0;
@@ -99,18 +72,7 @@ void loop() {
   else {
     batt_loop_count++;
   }
-
-  if (DEBUG) {
-    if (door_status_4 == DOOR_OPEN) {
-      debug_print("Door open");
-    }
-    else {
-      debug_print("Door closed");
-    }
-  }
-
   payload[0] = has_lowbat;
-  payload[4] = door_status_4;
 
   // If unable to retrieve sensor info (common on initial startup) then don't
   // report anything
@@ -120,15 +82,7 @@ void loop() {
     payload[DHT22_PORT+1] = humi * 10;
     debug_print("Temperature: " + String(payload[DHT22_PORT]*0.01) + "C " + 
       "Humidity: " + String(payload[DHT22_PORT+1]*0.01) + "%");
-
-    // XXX: Untested what happens with dht sensor if response handles negative
-    // temperatures correctly
-    // // The value returned is unsigned so need to make it signed for
-    // // negative temperatures
-    // if (tempc > 128.0) {
-    //   tempc -= 256;
-    // }
-
+      
     if (DEBUG) {
       debug_print("Not sending data");
       debug_print(' ');
@@ -140,6 +94,6 @@ void loop() {
       rf12_sleep(RF12_SLEEP);
     }
   }
-  
+
   Sleepy::loseSomeTime(60000);
 }
